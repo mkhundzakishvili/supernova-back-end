@@ -18,7 +18,7 @@ const knex = knexModule({
   useNullAsDefault: true,
 });
 
-const wss = new WebSocketServer({ port: 3000 });
+const wss = new WebSocketServer({ port: 5000 });
 
 async function createUsersTable(): Promise<void> {
   await knex.schema.createTable('users', (table) => {
