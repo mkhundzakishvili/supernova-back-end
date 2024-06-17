@@ -32,6 +32,15 @@ async function createUsersTable(): Promise<void> {
 
 //createUsersTable(); // only once
 
+async function getUser(id) {
+  let user =  await await knex.select().from('users').where({id}).then(data => data[0]);
+  return {
+    username: user.username,
+    id: user.id,
+    signInCount: user.signInCount
+  };
+}
+
 async function getTheSum() {
   const SumOfLogIns = await knex.raw('SELECT SUM(signInCount) AS summ FROM users').then(data => data[0].summ);
   return SumOfLogIns;
@@ -111,6 +120,12 @@ const typeDefs = `#graphql
     signInCount: Int
   }
 
+  type UserResult {
+    id: ID!
+    username: String!
+    signInCount: Int!
+  }
+
   type LogInResult {
     userId: ID
     username: String
@@ -119,7 +134,7 @@ const typeDefs = `#graphql
   }
 
   type Query {
-    user: User!
+    user: UserResult!
     logIn(username: String!, password: String!): LogInResult
     createUser(username: String!, password: String!): User
     sumOfLogIns: Int
@@ -129,9 +144,16 @@ const typeDefs = `#graphql
 
 const resolvers = {
   Query: {
-    user: async (_, { id }) => {
-      const user = await knex.select().from('users').where('id', id);
-      return user;
+    user: async (_, {}, context) => {
+      if(context.userId){
+        return await getUser(context.userId);
+      }
+      throw new GraphQLError('Not Authorized', {
+        extensions: {
+          code: 'NOTAUTHORIZED',
+          http: { status: 401 },
+        }
+      });
     },
     logIn: async (_, {username, password}) => {
       let obj = await logIn(username, password);
@@ -142,7 +164,6 @@ const resolvers = {
        return user;
     },
     sumOfLogIns: async (_,{}, context) => {
-      console.log(context.userId);
       if(context.userId){
         let sum = await getTheSum();
         return sum;
